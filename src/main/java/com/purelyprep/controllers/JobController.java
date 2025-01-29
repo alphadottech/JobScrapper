@@ -59,7 +59,8 @@ public class JobController {
         }
         if (!userExist){
             log.info("User Email not found....");
-            return new ResponseEntity<>("No Record found", HttpStatusCode.valueOf(HttpStatus.SC_OK)) ;
+           // return new ResponseEntity<>("No Record found", HttpStatusCode.valueOf(HttpStatus.SC_OK)) ;
+            return ResponseEntity.ok().body(new ResponseDTO(HttpStatus.SC_NO_CONTENT ,"User Not Found"));
         } else {
             Object redisValueObject = redisService.get(key);
             log.info("User Email address found....");
