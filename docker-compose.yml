@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: purelyprep
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - openai.model=gpt-3.5-turbo
+      - openai.api.url=https://api.openai.com/v1/chat/completions
+      - openai.api.key=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+      - monday.api.url=https://api.monday.com/v2
+      - redis.host=redis
+      - redis.job.queue=jobScraper
+      - google.sheets.service.email=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+      - google.sheets.service.key=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+      - google.sheets.service.key.name=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+      - jwt.secret=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+      - jwt.expiration.ms=86400000
+      - jwt.audience=purelyprep
+      - jwt.issuer=purelyprep
+      - environment.name=development
+      - sendgrid.api.key=bdefdc879f5d979034ac64c36c17b9b704d33ab7950dbb2e3d6d7600c87e2f9f
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+networks:
+  default:
+    name: purelyprep-network
