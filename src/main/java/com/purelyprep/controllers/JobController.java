@@ -75,30 +75,6 @@ public class JobController {
     }
 
 
-    @PostMapping(value = "/runJobNow")
-    public Success runJobNow(@RequestParam(required = true, name = "rightNow") boolean rightNow,
-                             @RequestParam(required = false, name = "initialize") Boolean initialize,
-                             @RequestParam(required = false, name = "emails") String emails,
-                             @RequestParam(required = false, name = "setSent") Boolean setSent,
-                             @RequestBody Schedule schedule)
-    {
-        schedule.prefs.runId = UUID.randomUUID().toString();
-        if(schedule.prefs.reportSchedules!=null) {
-            scheduleService.addToDailySchedule(schedule);
-        }
-        if (initialize != null && initialize) {
-            Set<String> emailSet = null;
-            if (emails != null && !emails.isEmpty()) {
-                emailSet = new HashSet<>();
-                for (String email : emails.split(",")) {
-                    emailSet.add(email.trim());
-                }
-            }
-            scheduleService.scrapeAndEmailInitialJobs(schedule.prefs, emailSet, setSent);
-        }
-        return new Success();
-    }
-
     @GetMapping(value = "/results/{runId}")
     @ResponseBody
     public ResponseMessage<JobResult> getResults(
