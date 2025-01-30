@@ -36,7 +36,7 @@ public class CandidatePreferences implements Serializable {
         this.runId = prefs.runId;
         this.splitByCountry = prefs.splitByCountry;
         //this.seniorityLevel = prefs.seniorityLevel;
-        this.desiredComapanies=prefs.desiredComapanies;
+        this.desiredCompanies=prefs.desiredCompanies;
         this.desiredIndustry=prefs.desiredIndustry;
         this.undesiredIndustry=prefs.undesiredIndustry;
         this.desiredCompanySize=prefs.desiredCompanySize;
@@ -59,7 +59,7 @@ public class CandidatePreferences implements Serializable {
     public Set<String> undesiredCompanies = new HashSet<>();
     public String candidateResume = "";
     public MultipartFile candidateResumeFile;
-    public String candidateResumePath = "/home/ubuntu/Ajay_Resume.pdf";
+    public String candidateResumePath = "";
     public Integer maxJobAgeDays = 14;
     public String runId = "";
     public Boolean splitByCountry = false;
@@ -67,7 +67,7 @@ public class CandidatePreferences implements Serializable {
     //public String seniorityLevel = "";
 
     public String candidateName;
-    public Set<String> desiredComapanies = new HashSet<>();
+    public Set<String> desiredCompanies = new HashSet<>();
     public Set<String> desiredIndustry = new HashSet<>();
     public Set<String> undesiredIndustry = new HashSet<>();
     public String desiredCompanySize;
@@ -108,7 +108,7 @@ public class CandidatePreferences implements Serializable {
                 ", runId='" + runId + '\'' +
                 ", splitByCountry=" + splitByCountry +
                // ", seniorityLevel='" + seniorityLevel + '\'' +
-                ", desiredComapanies='" + desiredComapanies + '\'' +
+                ", desiredCompanies='" + desiredCompanies + '\'' +
                 ", desiredIndustry='" + desiredIndustry + '\'' +
                 ", undesiredIndustry='" + undesiredIndustry + '\'' +
                 ", desiredCompanySize='" + desiredCompanySize + '\'' +
