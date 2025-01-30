@@ -148,7 +148,7 @@ public class ScheduleService {
 
 		resume.transferTo(destFile);
 
-		return "File uploaded and saved as: " + filePath.toString();
+		return  filePath.toString();
 	}
 
 	public void addToDailySchedule(Schedule schedule) {

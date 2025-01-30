@@ -18,6 +18,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
+import org.openqa.selenium.firefox.GeckoDriverService;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
@@ -53,8 +54,8 @@ public class JobScraper {
     private static final Integer MAX_SAME_SET_COUNT = 3;
 //    public static final Integer MAX_JOBS = 500;
 //    public static final Integer MIN_JOBS = 400;
-    public static final Integer MAX_JOBS = 3;
-    public static final Integer MIN_JOBS = 1;
+    public static final Integer MAX_JOBS = 130;
+    public static final Integer MIN_JOBS = 10;
     public static final Integer MIN_SCORE = 70;
     public static final Integer MIN_FIT = 70;
     public static final Integer MIN_HARD = 50;
@@ -113,38 +114,7 @@ public class JobScraper {
         }
     }
 
-//    public static WebDriver getDriver(String type, String proxy) {
-//        String addr = proxy.split(":")[0];
-//        Integer port = Integer.parseInt(proxy.split(":")[1]);
-//        if (type.equals("Firefox")) {
-//            FirefoxOptions options = new FirefoxOptions();
-//            options.addArguments("--headless");
-//
-//            if (ThreadLocalRandom.current().nextBoolean()) {
-//                options.addPreference("network.proxy.type", 1);
-//                options.addPreference("network.proxy.http", addr);
-//                options.addPreference("network.proxy.http_port", port);
-//                options.addPreference("network.proxy.socks", addr);
-//                options.addPreference("network.proxy.socks_port", port);
-//                options.addPreference("network.proxy.socks_remote_dns", false);
-//                options.addPreference("network.proxy.ssl", addr);
-//                options.addPreference("network.proxy.ssl_port", port);
-//            }
-//
-//            WebDriver driver = new FirefoxDriver(options);
-//            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(12));
-//            driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(1));
-//            return driver;
-//        } else if (type.equals("Chrome")) {
-//            ChromeOptions options = new ChromeOptions();
-//            options.addArguments("--headless");
-//            WebDriver driver = new ChromeDriver(options);
-//            driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(12));
-//            driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(1));
-//            return driver;
-//        }
-//        return null;
-//    }
+
 public static WebDriver getDriver(String type, String proxy) {
     String addr = proxy.split(":")[0];
     Integer port = Integer.parseInt(proxy.split(":")[1]);
@@ -155,6 +125,8 @@ public static WebDriver getDriver(String type, String proxy) {
     while (attempts > 0) {
         try {
             if (type.equals("Firefox")) {
+//                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
+
                 FirefoxOptions options = new FirefoxOptions();
                 options.setBinary("/usr/bin/firefox");
                 options.addArguments("--headless"); // Optional: Remove if not needed
@@ -173,7 +145,8 @@ public static WebDriver getDriver(String type, String proxy) {
                 driver = new FirefoxDriver(options);
             } else if (type.equals("Chrome")) {
                 ChromeOptions options = new ChromeOptions();
-                // options.addArguments("--headless"); // Optional: Remove if not needed
+                options.setBinary("/usr/bin/google-chrome");
+                 options.addArguments("--headless"); // Optional: Remove if not needed
                 driver = new ChromeDriver(options);
             }
 
@@ -198,6 +171,10 @@ public static WebDriver getDriver(String type, String proxy) {
 
     return driver;
 }
+    
+    
+
+    
     public WebDriver getRandomDriver() {
         return getDriver(BROWSERS.get(ThreadLocalRandom.current().nextInt(BROWSERS.size())), getProxy());
     }
@@ -327,13 +304,14 @@ public static WebDriver getDriver(String type, String proxy) {
         RedisService.getInstance().set(getCandidateJobKey(candidateId, companyName, title), true, 15, TimeUnit.DAYS);
     }
 
-    public static Double salaryToDouble(String salary) {
-        return Double.parseDouble(salary.trim().split("/")[0].trim()
-            .replace("$", "")
-            .replace("€", "")
-            .replace(",", ""));
-    }
+//    public static Double salaryToDouble(String salary) {
+//        return Double.parseDouble(salary.trim().split("/")[0].trim()
+//            .replace("$", "")
+//            .replace("€", "")
+//            .replace(",", ""));
+//    }
 
+    
     private static double replyToDouble(String reply) {
         try {
             reply = reply.replaceAll("[^0-9\\.]", "");
@@ -345,6 +323,18 @@ public static WebDriver getDriver(String type, String proxy) {
             return 0;
         }
     }
+    
+    public static Double salaryToDouble(String salary) {
+        return Double.parseDouble(salary.trim()
+                .split("/")[0]    // This will handle salary part before the "/"
+                .trim()            // Trim any spaces around
+                .replace("£", "")  // Remove the currency symbol
+                .replace("$", "")  // Remove any other symbols like $
+                .replace("€", "")  // Remove Euro symbol if applicable
+                .replace(",", "")  // Remove commas used for thousands separator
+                .replaceAll("[^0-9.]", "")); // Ensure only digits and dot remain
+    }
+
 
     public WebDriver gotoUrlRetry(Exception e, String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
         Util.waitRandom(200, 2000);
@@ -972,7 +962,7 @@ public static WebDriver getDriver(String type, String proxy) {
                 Util.encodeFileToBase64(prefs.candidateResumePath),
                 prefs.candidateResumePath.split("\\.")[1]
             );
-            prefs.candidateResumePath = "";
+//            prefs.candidateResumePath = "";
         }
 
         if (prefs.fullRemote && prefs.desiredLocations != null && !prefs.desiredLocations.isEmpty()) {

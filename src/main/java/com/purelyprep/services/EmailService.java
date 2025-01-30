@@ -26,8 +26,10 @@ import org.springframework.stereotype.Service;
 
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class EmailService {
@@ -59,7 +61,13 @@ public class EmailService {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, StandardCharsets.UTF_8.name());
             helper.setFrom(from);
-            helper.setTo(String.join(", ", tos));
+            // Clean the email addresses (remove spaces around each one)
+            String[] toEmails = tos.stream()
+                    .map(String::trim)  // Ensure no extra spaces
+                    .toArray(String[]::new);
+
+            // Set the cleaned email addresses
+            helper.setTo(toEmails);  // Use array format
             helper.setText(body, true);
             helper.setSubject(subject);
             javaMailSender.send(mimeMessage);

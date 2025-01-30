@@ -53,9 +53,9 @@ public class Util {
 
     public static String encodeFileToBase64(String fileName) {
         try {
-            File file = new File("/home/ubuntu/Ajay_Resume.pdf");
-            byte[] encoded;
-            encoded = Base64.getEncoder().encode(FileUtils.readFileToByteArray(file));
+            File file = new File(fileName);
+
+             byte[] encoded = Base64.getEncoder().encode(FileUtils.readFileToByteArray(file));
             return new String(encoded, StandardCharsets.ISO_8859_1);
         } catch (Exception e) {
             log.error("Error encoding file: ", e);

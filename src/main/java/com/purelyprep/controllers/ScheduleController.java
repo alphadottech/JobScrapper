@@ -61,17 +61,17 @@ public class ScheduleController {
 			schedule = objectMapper.readValue(scheduleData, Schedule.class);
 			schedule.prefs.candidateResumePath =scheduleService.saveResumeFile(resume, schedule.prefs.candidateId);
 			scheduleService.addToDailySchedule(schedule);
-//			if (initialize != null && initialize) {
-//				Set<String> emailSet = null;
-//				if (schedule.distributionList != null && !schedule.distributionList.isEmpty()) {
-//					emailSet = new HashSet<>();
-//					emailSet.add(schedule.prefs.candidateId.trim());
-//					for (String email : schedule.distributionList) {
-//						emailSet.add(email.trim());
-//					}
-//				}
-//				scheduleService.scrapeAndEmailInitialJobs(schedule.prefs, emailSet, true);
-//			}
+			if (initialize != null && initialize) {
+				Set<String> emailSet = null;
+				if (schedule.distributionList != null && !schedule.distributionList.isEmpty()) {
+					emailSet = new HashSet<>();
+					emailSet.add(schedule.prefs.candidateId.trim());
+					for (String email : schedule.distributionList) {
+						emailSet.add(email.trim());
+					}
+				}
+				scheduleService.scrapeAndEmailInitialJobs(schedule.prefs, emailSet, true);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return new Success(e.getMessage());
