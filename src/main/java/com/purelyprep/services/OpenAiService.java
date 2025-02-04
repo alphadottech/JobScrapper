@@ -81,7 +81,6 @@ public class OpenAiService {
             if (response == null || response.choices == null || response.choices.isEmpty()) {
                 return "";
             }
-
             return response.choices.get(0).message.content;
         } catch (HttpClientErrorException.TooManyRequests e) {
             if (e.getMessage().contains("You exceeded your current quota")) {

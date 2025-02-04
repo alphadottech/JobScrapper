@@ -99,5 +99,13 @@ public class JobController {
         }
         return Util.formatJobs(resp.response);
     }
+    
+	   @GetMapping("/getSuggestions/{title}")
+	    public ResponseEntity<List<String>> getAutocompleteSuggestions(
+	            @PathVariable(name = "title") String title) {
+	        
+	        List<String> suggestions = jobService.getAutocompleteSuggestions(title);
+	        return ResponseEntity.ok(suggestions);
+	    }
 
 }

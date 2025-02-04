@@ -1,5 +1,6 @@
 package com.purelyprep.services;
 
+import com.purelyprep.util.Util;
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.SendGrid;
@@ -26,7 +27,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.nio.charset.StandardCharsets;
-import java.util.ListIterator;
+
 import java.util.Set;
 
 @Service
@@ -55,12 +56,19 @@ public class EmailService {
     private String apiKey;
 
     public void sendPlainText(String from, Set<String> tos, String subject, String body) {
+    	
         try {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, StandardCharsets.UTF_8.name());
             helper.setFrom(from);
-            helper.setTo(String.join(", ", tos));
-            helper.setText(body, true);
+
+            String[] toEmails = tos.stream()
+                    .map(String::trim)  
+                    .toArray(String[]::new);
+
+
+            helper.setTo(toEmails);  
+            helper.setText(body,false);
             helper.setSubject(subject);
             javaMailSender.send(mimeMessage);
             System.out.println("Email has been sent successfully to --->"+String.join(", ", tos));
@@ -106,3 +114,4 @@ public class EmailService {
     }
 
 }
+
