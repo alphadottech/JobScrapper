@@ -34,7 +34,6 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.Base64;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -50,14 +49,12 @@ public class JobScraper {
     private static final Logger log = LoggerFactory.getLogger(JobScraper.class);
     private static final List<String> BROWSERS = List.of("Firefox", "Chrome");
     private static final String ProxiesUrl = "https://free-proxy-list.net/";
-    private static final Integer MAX_RETRIES = 2;
+    private static final Integer MAX_RETRIES = 20;
     private static final Integer MAX_SAME_SET_COUNT = 3;
-//    public static final Integer MAX_JOBS = 500;
-//    public static final Integer MIN_JOBS = 400;
-    public static final Integer MAX_JOBS = 130;
-    public static final Integer MIN_JOBS = 10;
+    public static final Integer MAX_JOBS = 500;
+    public static final Integer MIN_JOBS = 400;
     public static final Integer MIN_SCORE = 70;
-    public static final Integer MIN_FIT = 70;
+    public static final Integer MIN_FIT = 60;
     public static final Integer MIN_HARD = 50;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance();
@@ -128,7 +125,6 @@ public static WebDriver getDriver(String type, String proxy) {
 //                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
 
                 FirefoxOptions options = new FirefoxOptions();
-                options.setBinary("/usr/bin/firefox");
                 options.addArguments("--headless"); // Optional: Remove if not needed
 
                 if (ThreadLocalRandom.current().nextBoolean()) {
@@ -145,7 +141,6 @@ public static WebDriver getDriver(String type, String proxy) {
                 driver = new FirefoxDriver(options);
             } else if (type.equals("Chrome")) {
                 ChromeOptions options = new ChromeOptions();
-                options.setBinary("/usr/bin/google-chrome");
                  options.addArguments("--headless"); // Optional: Remove if not needed
                 driver = new ChromeDriver(options);
             }
@@ -618,10 +613,10 @@ public static WebDriver getDriver(String type, String proxy) {
             }
 
             //if (manager && !jobHasManagementFacet(title, jobRequirements)) {
-            if (!jobHasManagementFacet(title, jobRequirements)) {
-                log.info("No Management Facet");
-                return null;
-            }
+//            if (!jobHasManagementFacet(title, jobRequirements)) {
+//                log.info("No Management Facet");
+//                return null;
+//            }
 
 
             double fitScore = getFitScore(desiredTitle, resumeData, title, jobRequirements);
@@ -1022,6 +1017,7 @@ public static WebDriver getDriver(String type, String proxy) {
         boolean splitByCountry
         //int seniorityLevel
     ) {
+    			
         double lowestSalaryNum = Double.parseDouble(lowestSalary.replace("$", "").replace(",", ""));
         Map<String, Boolean> jobsDict = new HashMap<>();
         List<Job> jobsArr = new ArrayList<>();

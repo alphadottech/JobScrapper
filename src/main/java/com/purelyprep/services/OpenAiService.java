@@ -57,7 +57,6 @@ public class OpenAiService {
     }
 
     public String chat(List<Message> messages, int retries) {
-    	System.out.println("Chat call with message :"+messages);
         if (retries > maxRetries) {
             log.error("Exhausted chat retries");
             return "";
@@ -82,7 +81,6 @@ public class OpenAiService {
             if (response == null || response.choices == null || response.choices.isEmpty()) {
                 return "";
             }
-            System.out.println("Chat response with message :"+response);
             return response.choices.get(0).message.content;
         } catch (HttpClientErrorException.TooManyRequests e) {
             if (e.getMessage().contains("You exceeded your current quota")) {

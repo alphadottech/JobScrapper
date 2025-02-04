@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.purelyprep.pojo.Schedule;
 import com.purelyprep.pojo.ScheduledResults;
 import com.purelyprep.pojo.Success;
+import com.purelyprep.services.JobService;
 import com.purelyprep.services.ScheduleService;
 import com.purelyprep.util.Util;
 
@@ -59,8 +61,8 @@ public class ScheduleController {
 		Schedule schedule;
 		try {
 			schedule = objectMapper.readValue(scheduleData, Schedule.class);
-			schedule.prefs.candidateResumePath =scheduleService.saveResumeFile(resume, schedule.prefs.candidateId);
-			scheduleService.addToDailySchedule(schedule);
+			schedule =scheduleService.saveResumeFile(resume, schedule);
+			
 			if (initialize != null && initialize) {
 				Set<String> emailSet = null;
 				if (schedule.distributionList != null && !schedule.distributionList.isEmpty()) {
@@ -70,7 +72,7 @@ public class ScheduleController {
 						emailSet.add(email.trim());
 					}
 				}
-				scheduleService.scrapeAndEmailInitialJobs(schedule.prefs, emailSet, true);
+				scheduleService.scrapeAndEmailInitialJobs(schedule.prefs, emailSet);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -111,5 +113,7 @@ public class ScheduleController {
 		}
 		return "Results as of: [" + results.dateTime + "]\n\n\n" + Util.formatJobs(results.jobResult);
 	}
+	
+	
 
 }

@@ -58,8 +58,8 @@ public class CandidatePreferences implements Serializable {
     public List<String> undesiredRoles = new ArrayList<>();
     public Set<String> undesiredCompanies = new HashSet<>();
     public String candidateResume = "";
-    public MultipartFile candidateResumeFile;
     public String candidateResumePath = "";
+    public String candidateResumeName="";
     public Integer maxJobAgeDays = 14;
     public String runId = "";
     public Boolean splitByCountry = false;
@@ -104,6 +104,7 @@ public class CandidatePreferences implements Serializable {
                 ", undesiredCompanies=" + undesiredCompanies +
                 ", candidateResume='" + candidateResume + '\'' +
                 ", candidateResumePath='" + candidateResumePath + '\'' +
+                ",candidateResumeName='"+candidateResumeName+'\''+
                 ", maxJobAgeDays=" + maxJobAgeDays +
                 ", runId='" + runId + '\'' +
                 ", splitByCountry=" + splitByCountry +
