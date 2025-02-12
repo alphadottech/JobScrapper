@@ -252,22 +252,15 @@ public class ScheduleService {
 			if (scheduleObj!=null&&scheduleObj instanceof Map) {
 				schedule = objectMapper.convertValue(scheduleObj, Schedule.class);
 			}
-//            String  scheduleString = redisService.get(getScheduleKey(candidateId));
-//           Schedule schedule= objectMapper.readValue(scheduleString, Schedule.class);
 			log.info("Popped Schedule for Candidate: [" + schedule + "]");
 			if (schedule != null) {
-//				LocalDateTime lastSent = getLastSent(candidateId);
-//				if (lastSent != null
-//						&& Duration.between(lastSent, LocalDateTime.now(ZoneId.of(Util.timezone))).toDays() <= 5) {
-//					log.info("Sent <= 5 days ago: ["
-//							+ lastSent.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "]");
-//					continue;
-//				}
+
 				JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
 				JobResult jobResult = jobScraper.getJobsForCandidate(schedule.prefs, true);
 				ScheduledResults results = new ScheduledResults(jobResult, Util.getNow());
 				redisService.set(getResultKey(candidateId), results, 8, TimeUnit.DAYS);
-				emailService.sendPlainText(EmailService.from, defaultRecipients, getEmailSubject(candidateId, false),
+				Set<String> distributionSet = new HashSet<>(schedule.distributionList);
+				emailService.sendPlainText(EmailService.from,distributionSet, getEmailSubject(candidateId, false),
 						getEmailBody(jobResult, false));
 			}
 		}

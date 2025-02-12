@@ -35,7 +35,7 @@ public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
     private static EmailService emailService;
-    public static final String from = "devin.sills@gmail.com";
+    public static final String from = "searchagent@purelyprep.co";
 
     private static JavaMailSender javaMailSender;
 

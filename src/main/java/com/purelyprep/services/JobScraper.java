@@ -59,7 +59,7 @@ public class JobScraper {
     public static final Double distThresholdMiles=50.0;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance();
-	public  List<Job> excludedJobs=new LinkedList<>();
+	public  List<Job> excludedJobs=null;
 
     public JobScraper(int maxJobs, RestTemplate restTemplate) {
         this.maxJobs = maxJobs;
@@ -120,11 +120,10 @@ public static WebDriver getDriver(String type, String proxy) {
 
     WebDriver driver = null;
     int attempts = 3;
-
     while (attempts > 0) {
         try {
             if (type.equals("Firefox")) {
-//                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
+                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
 
                 FirefoxOptions options = new FirefoxOptions();
                 options.addArguments("--headless"); // Optional: Remove if not needed
@@ -143,14 +142,13 @@ public static WebDriver getDriver(String type, String proxy) {
                 driver = new FirefoxDriver(options);
             } else if (type.equals("Chrome")) {
                 ChromeOptions options = new ChromeOptions();
-                 options.addArguments("--headless"); // Optional: Remove if not needed
-                driver = new ChromeDriver(options);
+                 driver = new ChromeDriver(options);
             }
 
             if (driver != null) {
                 driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(12));
                 driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(1));
-                break;  // Exit loop on success
+                break;  
             }
 
         } catch (SessionNotCreatedException e) {
@@ -162,7 +160,7 @@ public static WebDriver getDriver(String type, String proxy) {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            break;  // Exit loop on unexpected error
+            break;  
         }
     }
 
@@ -301,14 +299,7 @@ public static WebDriver getDriver(String type, String proxy) {
         RedisService.getInstance().set(getCandidateJobKey(candidateId, companyName, title), true, 15, TimeUnit.DAYS);
     }
 
-//    public static Double salaryToDouble(String salary) {
-//        return Double.parseDouble(salary.trim().split("/")[0].trim()
-//            .replace("$", "")
-//            .replace("€", "")
-//            .replace(",", ""));
-//    }
 
-    
     private static double replyToDouble(String reply) {
         try {
             reply = reply.replaceAll("[^0-9\\.]", "");
@@ -345,6 +336,9 @@ public static WebDriver getDriver(String type, String proxy) {
         log.info("Getting: " + url);
 
         try {
+        	
+//        	List<Proxy> proxies= getProxies();
+        	
             driver.get(url);
 
             if (customValidate != null && !customValidate.apply(driver)) {
@@ -378,10 +372,6 @@ public static WebDriver getDriver(String type, String proxy) {
         try {
         	driver = getRandomDriver();
             driver.get(url);
-
-//            if (customValidate != null && !customValidate.apply(driver)) {
-//                throw new Exception("Validation Failed");
-//            }
 
             if (waitForId != null) {
                 new WebDriverWait(driver, Duration.ofSeconds(5))
@@ -542,7 +532,6 @@ public static WebDriver getDriver(String type, String proxy) {
                 LocalDate postedDate = LocalDate.parse(postedElem.attr("datetime"));
                 if (postedDate.isBefore(LocalDate.now().minusDays(prefs.maxJobAgeDays))) {
                     log.info("Too old: " + postedDate);
-//                    ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
                     return null;
                 }
             }
@@ -553,8 +542,6 @@ public static WebDriver getDriver(String type, String proxy) {
             
             if (companyName.contains("Get It Recruit")) {
                 log.info("Get It Recruit");
-//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                 return null;
             }
 
@@ -562,8 +549,6 @@ public static WebDriver getDriver(String type, String proxy) {
                 for (String undesiredCompany : prefs.undesiredCompanies) {
                     if (companyName.toLowerCase().contains(undesiredCompany.toLowerCase())) {
                         log.info("Undesired company: [" + undesiredCompany + "]");
-//                        ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                         return null;
                     }
                 }
@@ -571,15 +556,11 @@ public static WebDriver getDriver(String type, String proxy) {
 
             if (title.toLowerCase().contains("contract")) {
                 log.info("Contract: [" + title + "]");
-//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                 return null;
             }
 
             if (alreadySent(prefs.candidateId, companyName, title)) {
                 log.info("Already sent");
-//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                 return null;
             }
 
@@ -587,8 +568,6 @@ public static WebDriver getDriver(String type, String proxy) {
             JobDetails jobDetails = processJobDetails(jobDetailsUrl, 0);
 
             if (jobDetails == null) {
-//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                 log.info("Null Job Details");
                 return null;
             }
@@ -599,8 +578,6 @@ public static WebDriver getDriver(String type, String proxy) {
             	boolean matchFound = locations.stream()
                         .anyMatch(prefs.undesiredLocations::contains);
             	if(matchFound) {
-//            		ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-            		
             		return null;
             	}
             }
@@ -610,8 +587,6 @@ public static WebDriver getDriver(String type, String proxy) {
             boolean isLocationUnderRequiredMiles = validateLocationWithCandidateLocationsBasedOnMiles(locations, prefs.desiredLocations, prefs.physicalLocation);
 
             if(!prefs.fullRemote&&!isLocationUnderRequiredMiles) {
-//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
             	 log.info("Location is not under 50 miles");
             	return null;
             }
@@ -621,37 +596,22 @@ public static WebDriver getDriver(String type, String proxy) {
                 double minSalary = salaryToDouble(salaryRng[0]);
                 double maxSalary = (salaryRng.length > 1) ? salaryToDouble(salaryRng[1]) : minSalary;
                 if (maxSalary < lowestSalaryNum) {
-//                	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                 	log.info("Salary too low: [" + jobDetails.salary + "]");
                     
                     return null;
                 }
             }
 
-            if (jobDetails.jobDescr.contains("Get It Recruit")) {
-//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
-                log.info("Get It Recruit");
+            if (jobDetails.jobDescr.contains("Get It Recruit")||jobDetails.jobDescr.contains("volunteer")) {
+                log.info("Job Desc. contains "+jobDetails.jobDescr);
                 return null;
             }
-
-            if (jobDetails.jobDescr.contains("volunteer")) {
-//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
-                log.info("Volunteer");
-                return null;
-            }
-
-
 
             if (jobDetails.itemDict.containsKey("employment type")){
                 String value = jobDetails.itemDict.get("employment type").replace("-", " ").toUpperCase();
 
             	if(!prefs.jobTypes.contains(value))
              {
-//            		ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
             	log.info("employment type mismatch");
                 return null;
              }
@@ -661,7 +621,6 @@ public static WebDriver getDriver(String type, String proxy) {
             		&&jobDetails.itemDict.containsKey("industries")
             		&&prefs.undesiredIndustry.contains(jobDetails.itemDict.get("industries"))) {
             	log.info("Undesired Industry: [" + prefs.undesiredIndustry + "]");
-//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
 
             return null;
             }
@@ -678,8 +637,6 @@ public static WebDriver getDriver(String type, String proxy) {
 //                    return null;
 //                }
 //            }
-            
-            //need to put some more logic
 
 
             if (jobRequirements.isEmpty()) {
@@ -689,9 +646,14 @@ public static WebDriver getDriver(String type, String proxy) {
             String hardRequirements = getHardRequirements(jobDetails.jobDescr);
             double hardReqMatch = getHardRequirementsMatch(hardRequirements, prefs.candidateResume);
 
-       
-            if (hardReqMatch < MIN_HARD) {
-            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Hard requirement mismatch with score: "+hardReqMatch,locations, Util.getNow()));
+            // Remove the "%" sign
+            String scoreWithoutPercentage = prefs.minimumScore.replace("%", "");
+
+            // Convert the result to a double
+            double prefsMinScore = Double.parseDouble(scoreWithoutPercentage);
+//          if (hardReqMatch < MIN_HARD) {
+            if (hardReqMatch <prefsMinScore ) {
+            excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Hard requirement mismatch with score: "+hardReqMatch,locations, Util.getNow()));
                 log.info("Hard Requirements Mismatch");
                 return null;
             }
@@ -703,7 +665,9 @@ public static WebDriver getDriver(String type, String proxy) {
             
 
             double score = getSkillsRequirementsMatchScore(resumeData, jobRequirements);
-            if (score < MIN_SCORE) {
+    
+//            if (score < MIN_SCORE) {
+            if (score < prefsMinScore) {
             	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Skill requirements mismatch with score: "+score,locations, Util.getNow()));
 
                 log.info("Too low first layer score: [" + score + "]");
@@ -712,7 +676,8 @@ public static WebDriver getDriver(String type, String proxy) {
 
 
             double fitScore = getFitScore(desiredTitle, resumeData, title, jobRequirements);
-            if (fitScore < MIN_FIT) {
+//            if (fitScore < MIN_FIT) {
+            if (fitScore < prefsMinScore) {
             	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Fit score mismatch with score: "+fitScore,locations, Util.getNow()));
 
                 log.info("Too low fit score: [" + fitScore + "]");
@@ -723,8 +688,6 @@ public static WebDriver getDriver(String type, String proxy) {
                 double maxSalary = getSalary(jobDetails.jobDescr);
                 if (maxSalary > 0) {
                     if (maxSalary < lowestSalaryNum) {
-//                    	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
-
                         log.info("Extracted salary too low: [" + maxSalary + "]");
                         return null;
                     }
@@ -1081,15 +1044,7 @@ public static WebDriver getDriver(String type, String proxy) {
     private LatLong getLatLong(String location) {
         List<Address> results;
         try {
-        	 if (location != null && (location.contains("Metropolitan Area"))) {
-                 // Remove "Metropolitan Area" from the location string
-        		 location=  location.replace(" Metropolitan Area", "");
-             }
-        	 else if(location != null &&location.contains("Metroplex")) {
-        		 location=  location.replace(" Metroplex", "");
-
-        	 }
-        	 
+        	location= LocationKeyword.removeKeywords(location);
             results = geoLocator.search(location);
             if (results != null && results.size() > 0) {
                 return new LatLong(results.get(0).getLatitude(), results.get(0).getLongitude());
@@ -1115,7 +1070,7 @@ public static WebDriver getDriver(String type, String proxy) {
 
     public JobResult getJobsForCandidate(CandidatePreferences prefs, boolean setSent) {
         JobResult resp = new JobResult();
-
+       excludedJobs =new LinkedList<>();
         
         if (prefs.candidateResumePath != null && !prefs.candidateResumePath.isEmpty()) {
             prefs.candidateResume = extractResumeText(
@@ -1153,7 +1108,7 @@ public static WebDriver getDriver(String type, String proxy) {
         }
 
 //        if (setSent) {
-//            ScheduleService.getInstance().setLastSent(prefs.candidateId);
+            ScheduleService.getInstance().setLastSent(prefs.candidateId);
 //        }
 
         return resp;
@@ -1195,12 +1150,12 @@ public static WebDriver getDriver(String type, String proxy) {
             closeDriver();
             log.error("Error getting and processing jobs: ", e);
         }
-        ScheduleService.excludedJobResult=new JobResult(excludedJobs,jobList.size() , Collections.singleton(jobTitle));
+        ScheduleService.excludedJobResult.merge(new JobResult(excludedJobs,jobList.size() , Collections.singleton(jobTitle)));
 
         log.info(
             "All Done! " +
             (jobList != null ? "Processed [" + jobList.size() + "] Jobs" : "No Jobs Processed") +
-            " with [" + jobsArr.size() + "] Jobs Sent And ["+excludedJobs.size()+"[ jobs skipped"
+            " with [" + jobsArr.size() + "] Jobs Sent And ["+excludedJobs.size()+"] jobs skipped by chat gpt"
         );
 
         return new JobResult(jobsArr, jobList.size(), Collections.singleton(jobTitle));
