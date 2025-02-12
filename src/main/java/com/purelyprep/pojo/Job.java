@@ -15,27 +15,26 @@ public class Job implements Serializable {
     public double score;
     public String explanation;
     public List<String> locations;
-    public String seniorityLevel;
     public String runDate;
 
     public static String getJobUuid(String companyName, String title) {
         return DigestUtils.md5Hex(companyName + "|" + title).toUpperCase();
     }
 
-    public static int seniorityLevelToInt(String seniorityLevel) {
-        if (seniorityLevel == null || seniorityLevel.isEmpty()) {
-            return -1;
-        }
-        switch (seniorityLevel.toLowerCase()) {
-            case "internship": return 0;
-            case "entry level": return 1;
-            case "associate": return 2;
-            case "mid-senior level": return 3;
-            case "director": return 4;
-            case "executive": return 5;
-            default: return -1;
-        }
-    }
+//    public static int seniorityLevelToInt(String seniorityLevel) {
+//        if (seniorityLevel == null || seniorityLevel.isEmpty()) {
+//            return -1;
+//        }
+//        switch (seniorityLevel.toLowerCase()) {
+//            case "internship": return 0;
+//            case "entry level": return 1;
+//            case "associate": return 2;
+//            case "mid-senior level": return 3;
+//            case "director": return 4;
+//            case "executive": return 5;
+//            default: return -1;
+//        }
+//    }
 
     public static String inToSeniorityLevel(int seniorityLevel) {
         if (seniorityLevel < 0) {
@@ -65,7 +64,6 @@ public class Job implements Serializable {
         this.score = score;
         this.explanation = explanation;
         this.locations = locations;
-        //this.seniorityLevel = seniorityLevel;
         this.runDate = runDate;
     }
 

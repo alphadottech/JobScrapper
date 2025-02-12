@@ -42,6 +42,7 @@ public class Util {
     }
 
     public static double distance(LatLong desired, LatLong loc) {
+
         double latDistance = Math.toRadians(loc.lat - desired.lat);
         double lonDistance = Math.toRadians(loc.lng - desired.lng);
         double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
@@ -49,7 +50,9 @@ public class Util {
                 * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c;
-    }
+    	}
+
+
 
     public static String encodeFileToBase64(String fileName) {
         try {
@@ -114,7 +117,6 @@ public class Util {
         for (Job job : jobResult.jobs) {
             sb.append("Title: " + job.title + "\n");
             sb.append("Salary: " + job.salary + "\n");
-            sb.append("Seniority: " + job.seniorityLevel + "\n");
             sb.append("Locations: [ " + String.join(", ", job.locations) + " ]\n");
             sb.append("Score: " + job.score + "\n");
             sb.append("Link: " + job.url + "\n");

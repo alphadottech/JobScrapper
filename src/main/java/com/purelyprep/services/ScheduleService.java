@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.util.DateTime;
 import com.purelyprep.pojo.CandidatePreferences;
+import com.purelyprep.pojo.Job;
 import com.purelyprep.pojo.JobResult;
 import com.purelyprep.pojo.Schedule;
 import com.purelyprep.pojo.ScheduledResults;
@@ -45,6 +47,8 @@ public class ScheduleService {
 	private static final Logger log = LoggerFactory.getLogger(ScheduleService.class);
 	private static final String setKey = RedisService.getSetKey(Schedule.class);
 	public static final Set<String> defaultRecipients = new HashSet<>();
+	public static JobResult excludedJobResult = new JobResult();
+
 	private ObjectMapper objectMapper;
 	static {
 		defaultRecipients.add("vinodverma.adt@gmail.com");
@@ -161,6 +165,9 @@ public class ScheduleService {
 	    }
 	    schedule.prefs.candidateResumePath=filePath.toString();
 	    schedule.prefs.candidateResumeName=originalFileName;
+	    if(schedule.prefs.jobLocations.size() == 1 &&schedule.prefs.jobLocations.contains("WFH")){
+	    	schedule.prefs.fullRemote=true;
+		}
 	    // Transfer the file to the destination
 	    resume.transferTo(destFile);
 	    scheduleService.addToDailySchedule(schedule);
@@ -207,12 +214,17 @@ public class ScheduleService {
 	public void scrapeAndEmailInitialJobs(CandidatePreferences prefs, Set<String> emails) {
 		removeLastSent(prefs.candidateId);
 		JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
+		
 		JobResult jobResult = jobScraper.getJobsForCandidate(prefs, true);
 		emails = (emails != null && !emails.isEmpty() ? emails : defaultRecipients);
 		if(jobResult!=null)
 		redisService.set(getResultKey(prefs.candidateId), jobResult, 8, TimeUnit.DAYS);
 		emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
 				getEmailBody(jobResult, true));
+		if(ScheduleService.excludedJobResult!=null) {
+			emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
+					getEmailBody(ScheduleService.excludedJobResult, true));
+		}
 	}
 
 	public LocalDateTime getLastSent(String candidateId) {

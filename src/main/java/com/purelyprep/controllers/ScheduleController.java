@@ -67,7 +67,6 @@ public class ScheduleController {
 				Set<String> emailSet = null;
 				if (schedule.distributionList != null && !schedule.distributionList.isEmpty()) {
 					emailSet = new HashSet<>();
-					emailSet.add(schedule.prefs.candidateId.trim());
 					for (String email : schedule.distributionList) {
 						emailSet.add(email.trim());
 					}

@@ -56,8 +56,10 @@ public class JobScraper {
     public static final Integer MIN_SCORE = 70;
     public static final Integer MIN_FIT = 60;
     public static final Integer MIN_HARD = 50;
+    public static final Double distThresholdMiles=50.0;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance();
+	public  List<Job> excludedJobs=new LinkedList<>();
 
     public JobScraper(int maxJobs, RestTemplate restTemplate) {
         this.maxJobs = maxJobs;
@@ -271,7 +273,7 @@ public static WebDriver getDriver(String type, String proxy) {
             if (tries > 10) {
                 return null;
             }
-            Util.waitRandom(1000, 2000);
+            Util.waitRandom(2000, 4000);
             return getChatResult(messages, tries + 1);
         }
     }
@@ -369,6 +371,42 @@ public static WebDriver getDriver(String type, String proxy) {
         return driver;
     }
 
+    
+    public WebDriver gotoUrlForJobInternal(String cssSelector,String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
+        log.info("Getting: " + url);
+
+        try {
+        	driver = getRandomDriver();
+            driver.get(url);
+
+//            if (customValidate != null && !customValidate.apply(driver)) {
+//                throw new Exception("Validation Failed");
+//            }
+
+            if (waitForId != null) {
+                new WebDriverWait(driver, Duration.ofSeconds(5))
+                        .until(ExpectedConditions.presenceOfElementLocated(By.id(waitForId)));
+            } else if (waitForClass != null) {
+                new WebDriverWait(driver, Duration.ofSeconds(5))
+                        .until(ExpectedConditions.presenceOfElementLocated(By.className(waitForClass)));
+            }else if (cssSelector != null) {
+                new WebDriverWait(driver, Duration.ofSeconds(5))
+                .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)));
+    }
+        } catch (Exception e) {
+            if (retries <= 2) {
+             	driver = getRandomDriver();
+                return gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",url, null, null, JobScraper::validateLinkedInPage, 0);
+            } else {
+                log.info("GotoUrl Retries Exhausted");
+                closeDriver();
+                return null;
+            }
+        }
+
+        return driver;
+    }
+
     public List<Element> getJobs(
             String jobTitleInputId,
             String jobTitle,
@@ -384,23 +422,24 @@ public static WebDriver getDriver(String type, String proxy) {
             String url = "https://www.linkedin.com/jobs/search?keywords=" + URLEncoder.encode(jobTitle, StandardCharsets.UTF_8);
             if (fullRemote) {
                 url += "&f_WT=2";
-            } else if(locations != null && !locations.isEmpty()) {
-                String locs = locations.stream()
-                        .map(CityToId::getId)
-                        .filter(Objects::nonNull)
-                        .map(Object::toString)
-                        .collect(Collectors.joining(","));
-                url += "&f_PP=" + URLEncoder.encode(locs, StandardCharsets.UTF_8);
-                if (splitByCountry) {
-                    String loc = new ArrayList<>(locations).get(0);
-                    String[] parts = loc.split(",");
-                    if (parts.length > 1) {
-                        String country = parts[1].trim();
-                        country = country.substring(0, 1).toUpperCase() + country.substring(1);
-                        url += "&location=" + URLEncoder.encode(country);
-                    }
-                }
-            }
+            } 
+//            else if(locations != null && !locations.isEmpty()) {
+//                String locs = locations.stream()
+//                        .map(CityToId::getId)
+//                        .filter(Objects::nonNull)
+//                        .map(Object::toString)
+//                        .collect(Collectors.joining(","));
+//                url += "&f_PP=" + URLEncoder.encode(locs, StandardCharsets.UTF_8);
+//                if (splitByCountry) {
+//                    String loc = new ArrayList<>(locations).get(0);
+//                    String[] parts = loc.split(",");
+//                    if (parts.length > 1) {
+//                        String country = parts[1].trim();
+//                        country = country.substring(0, 1).toUpperCase() + country.substring(1);
+//                        url += "&location=" + URLEncoder.encode(country);
+//                    }
+//                }
+//            }
             driver = gotoUrl(url, jobTitleInputId, null, JobScraper::validateLinkedInPage, -50);
 
             boolean firstRun = true;
@@ -485,18 +524,12 @@ public static WebDriver getDriver(String type, String proxy) {
     }
 
     public Job processJob (
-        String candidateId,
+    		CandidatePreferences prefs,
         Element baseCard,
         Map<String, Boolean> jobsDict,
         double lowestSalaryNum,
-        Integer maxJobAgeDays,
-        List<String> undesiredRoles,
-        Set<String> undesiredCompanies,
         String resumeData,
-        String resume,
-       // boolean manager,
         String desiredTitle
-        //int seniorityLevel
     ) {
         try {
             String jobUrn = baseCard.attr("data-entity-urn");
@@ -507,8 +540,9 @@ public static WebDriver getDriver(String type, String proxy) {
             Element postedElem = soupFindElementByClass(baseCard, "job-search-card__listdate");
             if (postedElem != null) {
                 LocalDate postedDate = LocalDate.parse(postedElem.attr("datetime"));
-                if (postedDate.isBefore(LocalDate.now().minusDays(maxJobAgeDays))) {
+                if (postedDate.isBefore(LocalDate.now().minusDays(prefs.maxJobAgeDays))) {
                     log.info("Too old: " + postedDate);
+//                    ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
                     return null;
                 }
             }
@@ -516,15 +550,20 @@ public static WebDriver getDriver(String type, String proxy) {
             log.info("Job: " + title);
             String companyName = soupGetElementText(baseCard, "base-search-card__subtitle", "");
 
+            
             if (companyName.contains("Get It Recruit")) {
                 log.info("Get It Recruit");
+//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 return null;
             }
 
-            if (undesiredCompanies != null && !undesiredCompanies.isEmpty()) {
-                for (String undesiredCompany : undesiredCompanies) {
+            if (prefs.undesiredCompanies != null && !prefs.undesiredCompanies.isEmpty()) {
+                for (String undesiredCompany : prefs.undesiredCompanies) {
                     if (companyName.toLowerCase().contains(undesiredCompany.toLowerCase())) {
                         log.info("Undesired company: [" + undesiredCompany + "]");
+//                        ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                         return null;
                     }
                 }
@@ -532,11 +571,15 @@ public static WebDriver getDriver(String type, String proxy) {
 
             if (title.toLowerCase().contains("contract")) {
                 log.info("Contract: [" + title + "]");
+//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 return null;
             }
 
-            if (alreadySent(candidateId, companyName, title)) {
+            if (alreadySent(prefs.candidateId, companyName, title)) {
                 log.info("Already sent");
+//                ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 return null;
             }
 
@@ -544,8 +587,33 @@ public static WebDriver getDriver(String type, String proxy) {
             JobDetails jobDetails = processJobDetails(jobDetailsUrl, 0);
 
             if (jobDetails == null) {
+//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 log.info("Null Job Details");
                 return null;
+            }
+            List<String> locations = getLocations(baseCard, jobDetails.jobDescr);
+
+            if((locations!=null&&!locations.isEmpty())
+            		&&(prefs.undesiredLocations!=null&&!prefs.undesiredLocations.isEmpty())){
+            	boolean matchFound = locations.stream()
+                        .anyMatch(prefs.undesiredLocations::contains);
+            	if(matchFound) {
+//            		ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+            		
+            		return null;
+            	}
+            }
+            
+            
+            
+            boolean isLocationUnderRequiredMiles = validateLocationWithCandidateLocationsBasedOnMiles(locations, prefs.desiredLocations, prefs.physicalLocation);
+
+            if(!prefs.fullRemote&&!isLocationUnderRequiredMiles) {
+//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
+            	 log.info("Location is not under 50 miles");
+            	return null;
             }
 
             if (!jobDetails.salary.isEmpty()) {
@@ -553,74 +621,100 @@ public static WebDriver getDriver(String type, String proxy) {
                 double minSalary = salaryToDouble(salaryRng[0]);
                 double maxSalary = (salaryRng.length > 1) ? salaryToDouble(salaryRng[1]) : minSalary;
                 if (maxSalary < lowestSalaryNum) {
-                    log.info("Salary too low: [" + jobDetails.salary + "]");
+//                	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
+                	log.info("Salary too low: [" + jobDetails.salary + "]");
+                    
                     return null;
                 }
             }
 
             if (jobDetails.jobDescr.contains("Get It Recruit")) {
+//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 log.info("Get It Recruit");
                 return null;
             }
 
             if (jobDetails.jobDescr.contains("volunteer")) {
+//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                 log.info("Volunteer");
                 return null;
             }
 
-            if (jobDetails.itemDict.containsKey("employment type") && jobDetails.itemDict.get("employment type").contains("contract")) {
-                log.info("Contract Role");
-                return null;
-            }
 
-            /*String jobSeniorityLevel = "";
-            if (jobDetails.itemDict.containsKey("seniority level")) {
-                jobSeniorityLevel = jobDetails.itemDict.get("seniority level");
-                if (seniorityLevel > -1 && Job.seniorityLevelToInt(jobSeniorityLevel) > seniorityLevel) {
-                    log.info("Mismatched Seniority: [" + jobSeniorityLevel + "]");
-                    return null;
-                }
+
+            if (jobDetails.itemDict.containsKey("employment type")){
+                String value = jobDetails.itemDict.get("employment type").replace("-", " ").toUpperCase();
+
+            	if(!prefs.jobTypes.contains(value))
+             {
+//            		ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
+            	log.info("employment type mismatch");
+                return null;
+             }
             }
-*/
+              
+            if((prefs.undesiredIndustry != null && !prefs.undesiredIndustry.isEmpty())
+            		&&jobDetails.itemDict.containsKey("industries")
+            		&&prefs.undesiredIndustry.contains(jobDetails.itemDict.get("industries"))) {
+            	log.info("Undesired Industry: [" + prefs.undesiredIndustry + "]");
+//            	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
+            return null;
+            }
+           
+
+  
+
             String jobRequirements = "";
 
-            if (undesiredRoles != null && !undesiredRoles.isEmpty()) {
-                jobRequirements = getJobDescrData(jobDetails.jobDescr);
-                if (!passesUndesiredList(undesiredRoles, title, jobRequirements)) {
-                    log.info("Undesired Role");
-                    return null;
-                }
-            }
+//            if (undesiredRoles != null && !undesiredRoles.isEmpty()) {
+//                jobRequirements = getJobDescrData(jobDetails.jobDescr);
+//                if (!passesUndesiredList(undesiredRoles, title, jobRequirements)) {
+//                    log.info("Undesired Role");
+//                    return null;
+//                }
+//            }
+            
+            //need to put some more logic
 
-            List<String> locations = getLocations(baseCard, jobDetails.jobDescr);
 
             if (jobRequirements.isEmpty()) {
                 jobRequirements = getJobDescrData(jobDetails.jobDescr);
             }
 
             String hardRequirements = getHardRequirements(jobDetails.jobDescr);
-            double hardReqMatch = getHardRequirementsMatch(hardRequirements, resume);
+            double hardReqMatch = getHardRequirementsMatch(hardRequirements, prefs.candidateResume);
 
+       
             if (hardReqMatch < MIN_HARD) {
+            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Hard requirement mismatch with score: "+hardReqMatch,locations, Util.getNow()));
                 log.info("Hard Requirements Mismatch");
                 return null;
             }
+            
+
+//            String jobInternalDetailsUrl = "https://www.linkedin.com/company/" + companyName+"?trk=public_jobs_jserp-result_job-search-card-subtitle";
+//            JobDetails jobInternalDetails = processJobInternalDetails(jobInternalDetailsUrl, 0);
+
+            
 
             double score = getSkillsRequirementsMatchScore(resumeData, jobRequirements);
             if (score < MIN_SCORE) {
+            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Skill requirements mismatch with score: "+score,locations, Util.getNow()));
+
                 log.info("Too low first layer score: [" + score + "]");
                 return null;
             }
 
-            //if (manager && !jobHasManagementFacet(title, jobRequirements)) {
-//            if (!jobHasManagementFacet(title, jobRequirements)) {
-//                log.info("No Management Facet");
-//                return null;
-//            }
-
 
             double fitScore = getFitScore(desiredTitle, resumeData, title, jobRequirements);
             if (fitScore < MIN_FIT) {
+            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Fit score mismatch with score: "+fitScore,locations, Util.getNow()));
+
                 log.info("Too low fit score: [" + fitScore + "]");
                 return null;
             }
@@ -629,6 +723,8 @@ public static WebDriver getDriver(String type, String proxy) {
                 double maxSalary = getSalary(jobDetails.jobDescr);
                 if (maxSalary > 0) {
                     if (maxSalary < lowestSalaryNum) {
+//                    	ScheduleService.excludedJobs.add(new Job(jobId, desiredTitle, jobId, jobUrn, resumeData, desiredTitle, lowestSalaryNum, jobUrn, BROWSERS, jobId));
+
                         log.info("Extracted salary too low: [" + maxSalary + "]");
                         return null;
                     }
@@ -652,7 +748,6 @@ public static WebDriver getDriver(String type, String proxy) {
                 Math.ceil(score),
                 getExplanation(desiredTitle, resumeData, title, jobRequirements),
                 locations,
-                //jobSeniorityLevel,
                 Util.getNow()
             );
 
@@ -664,7 +759,45 @@ public static WebDriver getDriver(String type, String proxy) {
         }
     }
 
-    public JobDetails processJobDetails(String jobDetailsUrl, int retries) {
+    private boolean validateLocationWithCandidateLocationsBasedOnMiles(List<String> locations, List<String> desiredLocations, String physicalLocation) {
+        boolean flag=false;
+        if(locations!=null){
+            for(String loc : locations){
+                if(!loc.contains("United States")){
+                    log.info("validating location for  location : "+loc+" physical location "+physicalLocation +" and desiredLocations"+desiredLocations);
+
+                    LatLong latLong= getLatLong(loc);
+                    flag = calculateMilesRange(latLong,desiredLocations, physicalLocation);
+                } else if(!loc.contains("USA")){
+                    LatLong latLong= getLatLong(loc);
+                    flag = calculateMilesRange(latLong,desiredLocations, physicalLocation);
+                }
+            }
+        }
+        return flag;
+    }
+
+    private boolean calculateMilesRange(LatLong latLong, List<String> desiredLocations, String physicalLocation) {
+        boolean validMilesRange=false;
+        if(physicalLocation!=null && !physicalLocation.isEmpty()) {
+
+            LatLong physicalLocLatLong =  getLatLong(physicalLocation);
+            Double calculateDistance= Util.distance(latLong, physicalLocLatLong);
+            validMilesRange = calculateDistance < distThresholdMiles;
+        }
+        if(desiredLocations!=null&&!desiredLocations.isEmpty()){
+            for(String desiredLoc : desiredLocations){
+                LatLong desiredLocationLatLong= getLatLong(desiredLoc);
+                Double calculateDistance= Util.distance(latLong, desiredLocationLatLong);
+                validMilesRange = calculateDistance < distThresholdMiles;
+            }
+        } 
+       
+        return validMilesRange;
+    }
+
+
+	public JobDetails processJobDetails(String jobDetailsUrl, int retries) {
         driver = gotoUrl(jobDetailsUrl, null, "description__job-criteria-list", JobScraper::validateLinkedInPage, 0);
         if (driver == null) {
             driver = getRandomDriver();
@@ -700,6 +833,23 @@ public static WebDriver getDriver(String type, String proxy) {
         return new JobDetails(salary, jobDescr, itemDict);
     }
 
+    
+    public JobDetails processJobInternalDetails(String jobInternalDetailsUrl, int retries) {
+        driver = gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",jobInternalDetailsUrl, null, null, JobScraper::validateLinkedInPage, 0);
+        if (driver == null) {
+            driver = getRandomDriver();
+          return null;
+        }
+        String source = driver.getPageSource();
+        Document soup = Jsoup.parse(source);
+ 
+
+
+        return new JobDetails(null, null,null);
+    }
+
+    
+    
     private String getResumeData(String resume) {
         List<Message> messages = new ArrayList<>();
         messages.add(new Message(Role.user, "Extract the Candidate Resume Skills and Candidate Work Experience " +
@@ -756,8 +906,8 @@ public static WebDriver getDriver(String type, String proxy) {
         return getChatResult(messages, 0);
     }
 
-    private double getHardRequirementsMatch(String hardRequirements, String resume) {
         List<Message> messages = new ArrayList<>();
+        private double getHardRequirementsMatch(String hardRequirements, String resume) {
         messages.add(new Message(Role.user, "**Task: Calculating Percentage of Hard Requirements Met by a Given Resume**\n" +
                 "\n" +
                 "**Objective:**\n" +
@@ -928,16 +1078,30 @@ public static WebDriver getDriver(String type, String proxy) {
         return replyToDouble(salary);
     }
 
-    private LatLong getLatLong(String loc) {
+    private LatLong getLatLong(String location) {
         List<Address> results;
         try {
-            results = geoLocator.search(loc);
+        	 if (location != null && (location.contains("Metropolitan Area"))) {
+                 // Remove "Metropolitan Area" from the location string
+        		 location=  location.replace(" Metropolitan Area", "");
+             }
+        	 else if(location != null &&location.contains("Metroplex")) {
+        		 location=  location.replace(" Metroplex", "");
+
+        	 }
+        	 
+            results = geoLocator.search(location);
             if (results != null && results.size() > 0) {
                 return new LatLong(results.get(0).getLatitude(), results.get(0).getLongitude());
+            }
+            else
+            {
+            	log.info("Unable to get latLong for "+location);
             }
         } catch (IOException e) {
             log.error("Error getting lat/long: ", e);
         }
+        
         return null;
     }
 
@@ -952,6 +1116,7 @@ public static WebDriver getDriver(String type, String proxy) {
     public JobResult getJobsForCandidate(CandidatePreferences prefs, boolean setSent) {
         JobResult resp = new JobResult();
 
+        
         if (prefs.candidateResumePath != null && !prefs.candidateResumePath.isEmpty()) {
             prefs.candidateResume = extractResumeText(
                 Util.encodeFileToBase64(prefs.candidateResumePath),
@@ -960,12 +1125,13 @@ public static WebDriver getDriver(String type, String proxy) {
 //            prefs.candidateResumePath = "";
         }
 
-        if (prefs.fullRemote && prefs.desiredLocations != null && !prefs.desiredLocations.isEmpty()) {
+        if (prefs.fullRemote
+        		&& (prefs.desiredLocations != null && !prefs.desiredLocations.isEmpty())) {
             CandidatePreferences remoteClone = prefs.clone();
             remoteClone.desiredLocations = new ArrayList<>();
             log.info("Getting remote jobs first");
             resp.merge(getJobsForCandidate(remoteClone, false));
-            prefs.fullRemote = false;
+            prefs.fullRemote=false;
         }
 
         if (prefs.splitByCountry && prefs.desiredLocations != null && prefs.desiredLocations.size() > 1) {
@@ -977,81 +1143,50 @@ public static WebDriver getDriver(String type, String proxy) {
             }
         } else {
             for (String jobTitle : prefs.jobTitles) {
-                resp.merge(getJobsForCandidate(
-                    prefs.candidateId,
-                    jobTitle,
-                   // prefs.manager,
-                    prefs.desiredLocations,
-                    prefs.fullRemote,
-                    prefs.lowestSalary,
-                    prefs.undesiredRoles,
-                    prefs.undesiredCompanies,
-                    prefs.candidateResume,
-                    prefs.maxJobAgeDays,
-                    setSent,
-                    prefs.splitByCountry
-                    //Job.seniorityLevelToInt(prefs.seniorityLevel)
-                ));
+            	resp.merge(getJobsForCandidate(
+                        jobTitle,
+                        setSent,
+                        prefs
+                    ));
             }
-        }
-
-        if (setSent) {
             ScheduleService.getInstance().setLastSent(prefs.candidateId);
         }
+
+//        if (setSent) {
+//            ScheduleService.getInstance().setLastSent(prefs.candidateId);
+//        }
 
         return resp;
     }
 
     private JobResult getJobsForCandidate(
-        String candidateId,
         String jobTitle,
-        //boolean manager,
-        List<String> desiredLocations,
-        boolean fullRemote,
-        String lowestSalary,
-        List<String> undesiredRoles,
-        Set<String> undesiredCompanies,
-        String candidateResume,
-        Integer maxJobAgeDays,
         boolean setSent,
-        boolean splitByCountry
-        //int seniorityLevel
+        CandidatePreferences prefs
     ) {
     			
-        double lowestSalaryNum = Double.parseDouble(lowestSalary.replace("$", "").replace(",", ""));
+        double lowestSalaryNum = Double.parseDouble(prefs.lowestSalary.replace("$", "").replace(",", ""));
         Map<String, Boolean> jobsDict = new HashMap<>();
         List<Job> jobsArr = new ArrayList<>();
 
         List<Element> jobList = null;
         try {
             while (jobList == null) {
-                jobList = getJobs("job-search-bar-keywords", jobTitle, fullRemote, 0, new HashSet<>(), desiredLocations, splitByCountry, 0, 0);
+                jobList = getJobs("job-search-bar-keywords", jobTitle, prefs.fullRemote, 0, new HashSet<>(), prefs.desiredLocations, prefs.splitByCountry, 0, 0);
             }
 
-            String resumeData = getResumeData(candidateResume);
+            String resumeData = getResumeData(prefs.candidateResume);
 
             for (Element baseCard : jobList) {
-                Job job = processJob(
-                    candidateId,
-                    baseCard,
-                    jobsDict,
-                    lowestSalaryNum,
-                    maxJobAgeDays,
-                    undesiredRoles,
-                    undesiredCompanies,
-                    resumeData,
-                    candidateResume,
-                   // manager,
-                    jobTitle
-                    //seniorityLevel
-                );
+				Job job = processJob(prefs,baseCard, jobsDict,lowestSalaryNum,resumeData, jobTitle);
 
                 if (job != null) {
                     jobsDict.put(job.jobId, true);
-                    if (setSent) {
-                        setSent(candidateId, job.companyName, job.title);
-                    }
+//                    if (setSent) {
+                        setSent(prefs.candidateId, job.companyName, job.title);
+//                    }
                     jobsArr.add(job);
+
                 }
             }
 
@@ -1060,11 +1195,12 @@ public static WebDriver getDriver(String type, String proxy) {
             closeDriver();
             log.error("Error getting and processing jobs: ", e);
         }
+        ScheduleService.excludedJobResult=new JobResult(excludedJobs,jobList.size() , Collections.singleton(jobTitle));
 
         log.info(
             "All Done! " +
             (jobList != null ? "Processed [" + jobList.size() + "] Jobs" : "No Jobs Processed") +
-            " with [" + jobsArr.size() + "] Jobs Sent"
+            " with [" + jobsArr.size() + "] Jobs Sent And ["+excludedJobs.size()+"[ jobs skipped"
         );
 
         return new JobResult(jobsArr, jobList.size(), Collections.singleton(jobTitle));

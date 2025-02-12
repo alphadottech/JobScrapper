@@ -35,7 +35,6 @@ public class CandidatePreferences implements Serializable {
         this.maxJobAgeDays = prefs.maxJobAgeDays;
         this.runId = prefs.runId;
         this.splitByCountry = prefs.splitByCountry;
-        //this.seniorityLevel = prefs.seniorityLevel;
         this.desiredCompanies=prefs.desiredCompanies;
         this.desiredIndustry=prefs.desiredIndustry;
         this.undesiredIndustry=prefs.undesiredIndustry;
@@ -48,7 +47,6 @@ public class CandidatePreferences implements Serializable {
 
     public String candidateId = "";
     public List<String> jobTitles = new ArrayList<>();
-   // public boolean manager = false;
     public List<String> jobLocations= new ArrayList<>();
     public List<String> jobTypes= new ArrayList<>();
     public String physicalLocation= "";
@@ -64,7 +62,6 @@ public class CandidatePreferences implements Serializable {
     public String runId = "";
     public Boolean splitByCountry = false;
     public List<DayOfWeek> reportSchedules= new ArrayList<>();
-    //public String seniorityLevel = "";
 
     public String candidateName;
     public Set<String> desiredCompanies = new HashSet<>();
@@ -96,7 +93,6 @@ public class CandidatePreferences implements Serializable {
                 ", jobLocations='" + jobLocations + '\'' +
                 ", jobTypes='" + jobTypes + '\'' +
                 ", physicalLocation='" + physicalLocation + '\'' +
-                //", manager=" + manager +
                 ", desiredLocations=" + desiredLocations +
                 ", fullRemote=" + fullRemote +
                 ", lowestSalary='" + lowestSalary + '\'' +
@@ -108,7 +104,6 @@ public class CandidatePreferences implements Serializable {
                 ", maxJobAgeDays=" + maxJobAgeDays +
                 ", runId='" + runId + '\'' +
                 ", splitByCountry=" + splitByCountry +
-               // ", seniorityLevel='" + seniorityLevel + '\'' +
                 ", desiredCompanies='" + desiredCompanies + '\'' +
                 ", desiredIndustry='" + desiredIndustry + '\'' +
                 ", undesiredIndustry='" + undesiredIndustry + '\'' +
