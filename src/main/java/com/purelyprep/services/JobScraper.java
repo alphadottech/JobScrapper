@@ -122,13 +122,13 @@ public static WebDriver getDriver(String type, String proxy) {
     int attempts = 3;
     while (attempts > 0) {
         try {
-            if (type.equals("Firefox")) {
-                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
+//            if (type.equals("Firefox")) {
+//                System.setProperty("webdriver.gecko.driver", "/snap/bin/geckodriver");
 
                 FirefoxOptions options = new FirefoxOptions();
                 options.addArguments("--headless"); // Optional: Remove if not needed
 
-                if (ThreadLocalRandom.current().nextBoolean()) {
+//                if (ThreadLocalRandom.current().nextBoolean()) {
                     options.addPreference("network.proxy.type", 1);
                     options.addPreference("network.proxy.http", addr);
                     options.addPreference("network.proxy.http_port", port);
@@ -137,17 +137,19 @@ public static WebDriver getDriver(String type, String proxy) {
                     options.addPreference("network.proxy.socks_remote_dns", false);
                     options.addPreference("network.proxy.ssl", addr);
                     options.addPreference("network.proxy.ssl_port", port);
-                }
+//                }
 
                 driver = new FirefoxDriver(options);
-            } else if (type.equals("Chrome")) {
-                ChromeOptions options = new ChromeOptions();
-                 driver = new ChromeDriver(options);
-            }
+//            } else if (type.equals("Chrome")) {
+//                ChromeOptions options = new ChromeOptions();
+////                options.addArguments("--headless");
+//                 driver = new ChromeDriver(options);
+//
+//            }
 
             if (driver != null) {
-                driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(12));
-                driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(1));
+                driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(15));
+                driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(5));
                 break;  
             }
 
@@ -174,6 +176,9 @@ public static WebDriver getDriver(String type, String proxy) {
         return getDriver(BROWSERS.get(ThreadLocalRandom.current().nextInt(BROWSERS.size())), getProxy());
     }
 
+    public WebDriver getRandomDriver(String proxy) {
+         return getDriver(BROWSERS.get(ThreadLocalRandom.current().nextInt(BROWSERS.size())), proxy);
+    }
     public static String executeScript(WebDriver driver, String script) {
         if (driver instanceof JavascriptExecutor) {
             Object resp = ((JavascriptExecutor)driver).executeScript(script);
@@ -324,20 +329,18 @@ public static WebDriver getDriver(String type, String proxy) {
     }
 
 
-    public WebDriver gotoUrlRetry(Exception e, String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
-        Util.waitRandom(200, 2000);
-        closeDriver();
-        driver = getRandomDriver();
-        log.info("GoTo Url Trying Again [" + retries + "]");
-        return gotoUrl(url, waitForId, waitForClass, customValidate, retries);
-    }
+//    public WebDriver gotoUrlRetry(Exception e, String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
+//        Util.waitRandom(200, 2000);
+//        closeDriver();
+//        driver = getRandomDriver();
+//        log.info("GoTo Url Trying Again [" + retries + "]");
+//        return gotoUrl(url, waitForId, waitForClass, customValidate, retries);
+//    }
 
     public WebDriver gotoUrl(String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
         log.info("Getting: " + url);
 
         try {
-        	
-//        	List<Proxy> proxies= getProxies();
         	
             driver.get(url);
 
@@ -353,49 +356,49 @@ public static WebDriver getDriver(String type, String proxy) {
                         .until(ExpectedConditions.presenceOfElementLocated(By.className(waitForClass)));
             }
         } catch (Exception e) {
-            if (retries <= MAX_RETRIES) {
-                return gotoUrlRetry(e, url, waitForId, waitForClass, customValidate, retries + 1);
-            } else {
-                log.info("GotoUrl Retries Exhausted");
-                closeDriver();
-                return null;
-            }
+//            if (retries <= MAX_RETRIES) {
+//                return gotoUrlRetry(e, url, waitForId, waitForClass, customValidate, retries + 1);
+//            } else {
+//                log.info("GotoUrl Retries Exhausted");
+//                closeDriver();
+                return driver;
+//            }
         }
 
         return driver;
     }
 
     
-    public WebDriver gotoUrlForJobInternal(String cssSelector,String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
-        log.info("Getting: " + url);
-
-        try {
-        	driver = getRandomDriver();
-            driver.get(url);
-
-            if (waitForId != null) {
-                new WebDriverWait(driver, Duration.ofSeconds(5))
-                        .until(ExpectedConditions.presenceOfElementLocated(By.id(waitForId)));
-            } else if (waitForClass != null) {
-                new WebDriverWait(driver, Duration.ofSeconds(5))
-                        .until(ExpectedConditions.presenceOfElementLocated(By.className(waitForClass)));
-            }else if (cssSelector != null) {
-                new WebDriverWait(driver, Duration.ofSeconds(5))
-                .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)));
-    }
-        } catch (Exception e) {
-            if (retries <= 2) {
-             	driver = getRandomDriver();
-                return gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",url, null, null, JobScraper::validateLinkedInPage, 0);
-            } else {
-                log.info("GotoUrl Retries Exhausted");
-                closeDriver();
-                return null;
-            }
-        }
-
-        return driver;
-    }
+//    public WebDriver gotoUrlForJobInternal(String cssSelector,String url, String waitForId, String waitForClass, Function<WebDriver, Boolean> customValidate, int retries) {
+//        log.info("Getting: " + url);
+//
+//        try {
+//        	driver = getRandomDriver();
+//            driver.get(url);
+//
+//            if (waitForId != null) {
+//                new WebDriverWait(driver, Duration.ofSeconds(5))
+//                        .until(ExpectedConditions.presenceOfElementLocated(By.id(waitForId)));
+//            } else if (waitForClass != null) {
+//                new WebDriverWait(driver, Duration.ofSeconds(5))
+//                        .until(ExpectedConditions.presenceOfElementLocated(By.className(waitForClass)));
+//            }else if (cssSelector != null) {
+//                new WebDriverWait(driver, Duration.ofSeconds(5))
+//                .until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)));
+//    }
+//        } catch (Exception e) {
+//            if (retries <= 2) {
+//             	driver = getRandomDriver();
+//                return gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",url, null, null, JobScraper::validateLinkedInPage, 0);
+//            } else {
+//                log.info("GotoUrl Retries Exhausted");
+//                closeDriver();
+//                return null;
+//            }
+//        }
+//
+//        return driver;
+//    }
 
     public List<Element> getJobs(
             String jobTitleInputId,
@@ -430,8 +433,19 @@ public static WebDriver getDriver(String type, String proxy) {
 //                    }
 //                }
 //            }
-            driver = gotoUrl(url, jobTitleInputId, null, JobScraper::validateLinkedInPage, -50);
+            List<WebElement> jobList=null;
+        	List<Proxy> proxies=getProxies(); 
+        	System.out.println(proxies.size());
+        	int count=0;
+        	for (Proxy proxy: proxies) {
+        		count++;
+        		System.out.println("Trying with proxy: "+proxy.getProxyStr()+" with count- "+count);
+        		closeDriver();
+        		driver = getRandomDriver(proxy.getProxyStr());
+        		 Util.waitRandom(2000, 4000);
+        		driver=gotoUrl(url, jobTitleInputId, null, JobScraper::validateLinkedInPage, -50);
 
+           
             boolean firstRun = true;
             while (firstRun || !validateLinkedInPage(driver)) {
                 if (!firstRun) {
@@ -442,7 +456,13 @@ public static WebDriver getDriver(String type, String proxy) {
                 Util.waitRandom(2000, 4000);
             }
 
-            List<WebElement> jobList = driverFindElementsByClass(driverFindElementByClass(driver, "jobs-search__results-list"), "base-card");
+           jobList = driverFindElementsByClass(driverFindElementByClass(driver, "jobs-search__results-list"), "base-card");
+			
+           if(jobList.size()>3) {
+				break;
+			}
+           
+        	}
             log.info("Initial Job Count: " + jobList.size());
 
             int tries = 0;
@@ -524,6 +544,9 @@ public static WebDriver getDriver(String type, String proxy) {
         try {
             String jobUrn = baseCard.attr("data-entity-urn");
             String jobId = jobUrn.split(":")[3];
+            String jobDetailsUrl = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/" + jobId;
+            String title = soupGetElementText(baseCard, "base-search-card__title", "");
+
             if (jobsDict.containsKey(jobId)) {
                 return null;
             }
@@ -532,16 +555,19 @@ public static WebDriver getDriver(String type, String proxy) {
                 LocalDate postedDate = LocalDate.parse(postedElem.attr("datetime"));
                 if (postedDate.isBefore(LocalDate.now().minusDays(prefs.maxJobAgeDays))) {
                     log.info("Too old: " + postedDate);
+                 	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"This job is Too old: " + postedDate));
+
                     return null;
                 }
             }
-            String title = soupGetElementText(baseCard, "base-search-card__title", "");
             log.info("Job: " + title);
             String companyName = soupGetElementText(baseCard, "base-search-card__subtitle", "");
 
             
             if (companyName.contains("Get It Recruit")) {
                 log.info("Get It Recruit");
+             	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"company name contains Get It Recruit"));
+
                 return null;
             }
 
@@ -549,6 +575,8 @@ public static WebDriver getDriver(String type, String proxy) {
                 for (String undesiredCompany : prefs.undesiredCompanies) {
                     if (companyName.toLowerCase().contains(undesiredCompany.toLowerCase())) {
                         log.info("Undesired company: [" + undesiredCompany + "]");
+                     	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Undesired company: [" + undesiredCompany + "]"));
+
                         return null;
                     }
                 }
@@ -556,19 +584,24 @@ public static WebDriver getDriver(String type, String proxy) {
 
             if (title.toLowerCase().contains("contract")) {
                 log.info("Contract: [" + title + "]");
+             	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"This job contains title Contract: [" + title + "]"));
+
                 return null;
             }
 
             if (alreadySent(prefs.candidateId, companyName, title)) {
                 log.info("Already sent");
+             	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"This job is Already Send"));
+
                 return null;
             }
 
-            String jobDetailsUrl = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/" + jobId;
             JobDetails jobDetails = processJobDetails(jobDetailsUrl, 0);
 
             if (jobDetails == null) {
                 log.info("Null Job Details");
+             	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Null job details found from linkedin"));
+
                 return null;
             }
             List<String> locations = getLocations(baseCard, jobDetails.jobDescr);
@@ -578,6 +611,8 @@ public static WebDriver getDriver(String type, String proxy) {
             	boolean matchFound = locations.stream()
                         .anyMatch(prefs.undesiredLocations::contains);
             	if(matchFound) {
+                 	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Location- "+locations.toString()+" is undesired location"));
+
             		return null;
             	}
             }
@@ -588,6 +623,8 @@ public static WebDriver getDriver(String type, String proxy) {
 
             if(!prefs.fullRemote&&!isLocationUnderRequiredMiles) {
             	 log.info("Location is not under 50 miles");
+             	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Location- "+locations.toString()+" is not under 50 miles"));
+
             	return null;
             }
 
@@ -597,13 +634,16 @@ public static WebDriver getDriver(String type, String proxy) {
                 double maxSalary = (salaryRng.length > 1) ? salaryToDouble(salaryRng[1]) : minSalary;
                 if (maxSalary < lowestSalaryNum) {
                 	log.info("Salary too low: [" + jobDetails.salary + "]");
-                    
+                	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Salary too low: [" + jobDetails.salary + "]"));
+
                     return null;
                 }
             }
 
             if (jobDetails.jobDescr.contains("Get It Recruit")||jobDetails.jobDescr.contains("volunteer")) {
                 log.info("Job Desc. contains "+jobDetails.jobDescr);
+            	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Job Desc. contains "+jobDetails.jobDescr));
+
                 return null;
             }
 
@@ -613,6 +653,8 @@ public static WebDriver getDriver(String type, String proxy) {
             	if(!prefs.jobTypes.contains(value))
              {
             	log.info("employment type mismatch");
+            	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"employment type mismatch: "+value));
+
                 return null;
              }
             }
@@ -621,6 +663,7 @@ public static WebDriver getDriver(String type, String proxy) {
             		&&jobDetails.itemDict.containsKey("industries")
             		&&prefs.undesiredIndustry.contains(jobDetails.itemDict.get("industries"))) {
             	log.info("Undesired Industry: [" + prefs.undesiredIndustry + "]");
+            	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Undesired Industry: [" + prefs.undesiredIndustry + "]"));
 
             return null;
             }
@@ -653,7 +696,7 @@ public static WebDriver getDriver(String type, String proxy) {
             double prefsMinScore = Double.parseDouble(scoreWithoutPercentage);
 //          if (hardReqMatch < MIN_HARD) {
             if (hardReqMatch <prefsMinScore ) {
-            excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Hard requirement mismatch with score: "+hardReqMatch,locations, Util.getNow()));
+            excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Hard requirement mismatch by chat gpt with hard requirement score: "+hardReqMatch));
                 log.info("Hard Requirements Mismatch");
                 return null;
             }
@@ -668,7 +711,7 @@ public static WebDriver getDriver(String type, String proxy) {
     
 //            if (score < MIN_SCORE) {
             if (score < prefsMinScore) {
-            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Skill requirements mismatch with score: "+score,locations, Util.getNow()));
+            	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Skill requirements mismatch by chat gpt with skill match score: "+score));
 
                 log.info("Too low first layer score: [" + score + "]");
                 return null;
@@ -678,7 +721,7 @@ public static WebDriver getDriver(String type, String proxy) {
             double fitScore = getFitScore(desiredTitle, resumeData, title, jobRequirements);
 //            if (fitScore < MIN_FIT) {
             if (fitScore < prefsMinScore) {
-            	excludedJobs.add(new Job(jobId, title, companyName, jobDetailsUrl, jobDetails.salary, jobDetails.jobDescr, 0,"Fit score mismatch with score: "+fitScore,locations, Util.getNow()));
+            	excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Fit score mismatch by chat gpt with fit score: "+fitScore));
 
                 log.info("Too low fit score: [" + fitScore + "]");
                 return null;
@@ -689,6 +732,8 @@ public static WebDriver getDriver(String type, String proxy) {
                 if (maxSalary > 0) {
                     if (maxSalary < lowestSalaryNum) {
                         log.info("Extracted salary too low: [" + maxSalary + "]");
+                        excludedJobs.add(new Job(jobId, title, jobDetailsUrl,"Extracted salary too low: [" + maxSalary + "]"));
+
                         return null;
                     }
                     jobDetails.salary = currencyFormatter.format(maxSalary);
@@ -777,7 +822,7 @@ public static WebDriver getDriver(String type, String proxy) {
                 .replace("\\n", "\\\\n");
         jobDescr = jobDescr.replaceAll("\\.([A-Z])", ". $1").replace("\"", "\\\"");
 
-        if (retries < 3 && salary.isEmpty() && !jobDescr.isEmpty()) {
+        if (retries < 2 && salary.isEmpty() && !jobDescr.isEmpty()) {
             log.info("Salary not found, retrying...");
             Util.waitRandom(1000, 4000);
             return processJobDetails(jobDetailsUrl, retries + 1);
@@ -797,19 +842,19 @@ public static WebDriver getDriver(String type, String proxy) {
     }
 
     
-    public JobDetails processJobInternalDetails(String jobInternalDetailsUrl, int retries) {
-        driver = gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",jobInternalDetailsUrl, null, null, JobScraper::validateLinkedInPage, 0);
-        if (driver == null) {
-            driver = getRandomDriver();
-          return null;
-        }
-        String source = driver.getPageSource();
-        Document soup = Jsoup.parse(source);
- 
-
-
-        return new JobDetails(null, null,null);
-    }
+//    public JobDetails processJobInternalDetails(String jobInternalDetailsUrl, int retries) {
+//        driver = gotoUrlForJobInternal("[data-test-id='about-us__industry'] dd",jobInternalDetailsUrl, null, null, JobScraper::validateLinkedInPage, 0);
+//        if (driver == null) {
+//            driver = getRandomDriver();
+//          return null;
+//        }
+//        String source = driver.getPageSource();
+//        Document soup = Jsoup.parse(source);
+// 
+//
+//
+//        return new JobDetails(null, null,null);
+//    }
 
     
     
@@ -869,8 +914,9 @@ public static WebDriver getDriver(String type, String proxy) {
         return getChatResult(messages, 0);
     }
 
-        List<Message> messages = new ArrayList<>();
+//        List<Message> messages = new ArrayList<>();
         private double getHardRequirementsMatch(String hardRequirements, String resume) {
+            List<Message> messages = new ArrayList<>();
         messages.add(new Message(Role.user, "**Task: Calculating Percentage of Hard Requirements Met by a Given Resume**\n" +
                 "\n" +
                 "**Objective:**\n" +
@@ -1080,31 +1126,31 @@ public static WebDriver getDriver(String type, String proxy) {
 //            prefs.candidateResumePath = "";
         }
 
-        if (prefs.fullRemote
-        		&& (prefs.desiredLocations != null && !prefs.desiredLocations.isEmpty())) {
-            CandidatePreferences remoteClone = prefs.clone();
-            remoteClone.desiredLocations = new ArrayList<>();
-            log.info("Getting remote jobs first");
-            resp.merge(getJobsForCandidate(remoteClone, false));
-            prefs.fullRemote=false;
-        }
+//        if (prefs.fullRemote
+//        		&& (prefs.desiredLocations != null && !prefs.desiredLocations.isEmpty())) {
+//            CandidatePreferences remoteClone = prefs.clone();
+//            remoteClone.desiredLocations = new ArrayList<>();
+//            log.info("Getting remote jobs first");
+//            resp.merge(getJobsForCandidate(remoteClone, false));
+//            prefs.fullRemote=false;
+//        }
 
-        if (prefs.splitByCountry && prefs.desiredLocations != null && prefs.desiredLocations.size() > 1) {
-            for (String loc : prefs.desiredLocations) {
-                CandidatePreferences remoteClone = prefs.clone();
-                remoteClone.desiredLocations = Collections.singletonList(loc.trim());
-                log.info("Getting jobs from: [" + loc + "]");
-                resp.merge(getJobsForCandidate(remoteClone, false));
-            }
-        } else {
+//        if (prefs.splitByCountry && prefs.desiredLocations != null && prefs.desiredLocations.size() > 1) {
+//            for (String loc : prefs.desiredLocations) {
+//                CandidatePreferences remoteClone = prefs.clone();
+//                remoteClone.desiredLocations = Collections.singletonList(loc.trim());
+//                log.info("Getting jobs from: [" + loc + "]");
+//                resp.merge(getJobsForCandidate(remoteClone, false));
+//            }
+//        } else {
             for (String jobTitle : prefs.jobTitles) {
             	resp.merge(getJobsForCandidate(
                         jobTitle,
                         setSent,
                         prefs
                     ));
-            }
-            ScheduleService.getInstance().setLastSent(prefs.candidateId);
+//            }
+//            ScheduleService.getInstance().setLastSent(prefs.candidateId);
         }
 
 //        if (setSent) {

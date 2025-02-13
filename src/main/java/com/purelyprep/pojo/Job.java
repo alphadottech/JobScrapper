@@ -67,6 +67,12 @@ public class Job implements Serializable {
         this.runDate = runDate;
     }
 
+    public Job(String jobId, String title, String url, String explanation) {
+     this.jobId = jobId;
+     this.title = title;
+     this.url = url;
+     this.explanation = explanation;
+ }
     public String getJobUuid() {
         return getJobUuid(this.companyName, this.title);
     }
