@@ -47,7 +47,6 @@ public class ScheduleService {
 	private static final Logger log = LoggerFactory.getLogger(ScheduleService.class);
 	private static final String setKey = RedisService.getSetKey(Schedule.class);
 	public static final Set<String> defaultRecipients = new HashSet<>();
-	public static JobResult excludedJobResult = new JobResult();
 
 	private ObjectMapper objectMapper;
 	static {
@@ -220,15 +219,15 @@ public class ScheduleService {
 		removeLastSent(prefs.candidateId);
 		JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
 		
-		JobResult jobResult = jobScraper.getJobsForCandidate(prefs, true);
+		Map<String, JobResult> jobResult = jobScraper.getJobsForCandidate(prefs, true);
 //		emails = (emails != null && !emails.isEmpty() ? emails : defaultRecipients);
 		if(jobResult!=null)
 		redisService.set(getResultKey(prefs.candidateId), jobResult, 8, TimeUnit.DAYS);
 		emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
-				getEmailBody(jobResult, true,prefsMinScore));
-		if(ScheduleService.excludedJobResult!=null) {
+				getEmailBody(jobResult.get("included"), true,prefsMinScore));
+		if(jobResult.containsKey("excluded")) {
 			emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
-					getEmailBodyForExcludedJobs(ScheduleService.excludedJobResult));
+					getEmailBodyForExcludedJobs(jobResult.get("excluded")));
 		}
 	}
 
@@ -261,8 +260,8 @@ public class ScheduleService {
 			if (schedule != null) {
 
 				JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
-				JobResult jobResult = jobScraper.getJobsForCandidate(schedule.prefs, true);
-				ScheduledResults results = new ScheduledResults(jobResult, Util.getNow());
+				Map<String, JobResult> jobResult = jobScraper.getJobsForCandidate(schedule.prefs, true);
+				ScheduledResults results = new ScheduledResults(jobResult.get("included"), Util.getNow());
 				redisService.set(getResultKey(candidateId), results, 8, TimeUnit.DAYS);
 				Set<String> distributionSet = new HashSet<>(schedule.distributionList);
 		        // Remove the "%" sign
@@ -273,10 +272,10 @@ public class ScheduleService {
 //				emailService.sendPlainText(EmailService.from,distributionSet, getEmailSubject(candidateId, false),
 //						getEmailBody(jobResult, false));
 				emailService.sendPlainText(EmailService.from, distributionSet, getEmailSubject(candidateId, true),
-						getEmailBody(jobResult, true,prefsMinScore));
-				if(ScheduleService.excludedJobResult!=null) {
+						getEmailBody(jobResult.get("included"), true,prefsMinScore));
+				if(jobResult.containsKey("excluded")) {
 					emailService.sendPlainText(EmailService.from, distributionSet, getEmailSubject(candidateId, true),
-							getEmailBodyForExcludedJobs(ScheduleService.excludedJobResult));
+							getEmailBodyForExcludedJobs(jobResult.get("excluded")));
 				}
 			}
 		}

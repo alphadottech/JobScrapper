@@ -128,7 +128,7 @@ public class Util {
 
     public static String formatExcludedJobs(JobResult jobResult) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Processed [" + jobResult.totalJobsProcessed + "] Jobs for Titles: [" +
+        sb.append("Excluded [" + jobResult.totalJobsProcessed + "] Jobs for Titles: [" +
                 jobResult.titles.stream().collect(Collectors.joining(", ")) + "]\n\n\n");
         for (Job job : jobResult.jobs) {
             sb.append("Title: " + job.title + "\n");
