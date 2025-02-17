@@ -126,6 +126,19 @@ public class Util {
         return sb.toString();
     }
 
+    public static String formatExcludedJobs(JobResult jobResult) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Excluded [" + jobResult.totalJobsProcessed + "] Jobs for Titles: [" +
+                jobResult.titles.stream().collect(Collectors.joining(", ")) + "]\n\n\n");
+        for (Job job : jobResult.jobs) {
+            sb.append("Title: " + job.title + "\n");
+            sb.append("Link: " + job.url + "\n");
+            sb.append("Explanation: " + job.explanation);
+            sb.append("\n\n\n");
+        }
+        return sb.toString();
+    }
+    
     public static String formatTopJobs(JobResult jobResult, Integer top, Integer minScore) {
         return Util.formatJobs(Util.getTopJobs(jobResult, top, minScore));
     }

@@ -47,7 +47,6 @@ public class ScheduleService {
 	private static final Logger log = LoggerFactory.getLogger(ScheduleService.class);
 	private static final String setKey = RedisService.getSetKey(Schedule.class);
 	public static final Set<String> defaultRecipients = new HashSet<>();
-	public static JobResult excludedJobResult = new JobResult();
 
 	private ObjectMapper objectMapper;
 	static {
@@ -212,18 +211,23 @@ public class ScheduleService {
 
 	@Async
 	public void scrapeAndEmailInitialJobs(CandidatePreferences prefs, Set<String> emails) {
+        // Remove the "%" sign
+        String scoreWithoutPercentage = prefs.minimumScore.replace("%", "");
+
+        // Convert the result to a double
+        int prefsMinScore = Integer.parseInt(scoreWithoutPercentage);
 		removeLastSent(prefs.candidateId);
 		JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
 		
-		JobResult jobResult = jobScraper.getJobsForCandidate(prefs, true);
-		emails = (emails != null && !emails.isEmpty() ? emails : defaultRecipients);
+		Map<String, JobResult> jobResult = jobScraper.getJobsForCandidate(prefs, true);
+//		emails = (emails != null && !emails.isEmpty() ? emails : defaultRecipients);
 		if(jobResult!=null)
 		redisService.set(getResultKey(prefs.candidateId), jobResult, 8, TimeUnit.DAYS);
 		emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
-				getEmailBody(jobResult, true));
-		if(ScheduleService.excludedJobResult!=null) {
+				getEmailBody(jobResult.get("included"), true,prefsMinScore));
+		if(jobResult.containsKey("excluded")) {
 			emailService.sendPlainText(EmailService.from, emails, getEmailSubject(prefs.candidateId, true),
-					getEmailBody(ScheduleService.excludedJobResult, true));
+					getEmailBodyForExcludedJobs(jobResult.get("excluded")));
 		}
 	}
 
@@ -252,32 +256,42 @@ public class ScheduleService {
 			if (scheduleObj!=null&&scheduleObj instanceof Map) {
 				schedule = objectMapper.convertValue(scheduleObj, Schedule.class);
 			}
-//            String  scheduleString = redisService.get(getScheduleKey(candidateId));
-//           Schedule schedule= objectMapper.readValue(scheduleString, Schedule.class);
 			log.info("Popped Schedule for Candidate: [" + schedule + "]");
 			if (schedule != null) {
-//				LocalDateTime lastSent = getLastSent(candidateId);
-//				if (lastSent != null
-//						&& Duration.between(lastSent, LocalDateTime.now(ZoneId.of(Util.timezone))).toDays() <= 5) {
-//					log.info("Sent <= 5 days ago: ["
-//							+ lastSent.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "]");
-//					continue;
-//				}
+
 				JobScraper jobScraper = new JobScraper(JobScraper.MAX_JOBS, restTemplate);
-				JobResult jobResult = jobScraper.getJobsForCandidate(schedule.prefs, true);
-				ScheduledResults results = new ScheduledResults(jobResult, Util.getNow());
+				Map<String, JobResult> jobResult = jobScraper.getJobsForCandidate(schedule.prefs, true);
+				ScheduledResults results = new ScheduledResults(jobResult.get("included"), Util.getNow());
 				redisService.set(getResultKey(candidateId), results, 8, TimeUnit.DAYS);
-				emailService.sendPlainText(EmailService.from, defaultRecipients, getEmailSubject(candidateId, false),
-						getEmailBody(jobResult, false));
+				Set<String> distributionSet = new HashSet<>(schedule.distributionList);
+		        // Remove the "%" sign
+		        String scoreWithoutPercentage = schedule.prefs.minimumScore.replace("%", "");
+
+		        // Convert the result to a double
+		        int prefsMinScore = Integer.parseInt(scoreWithoutPercentage);
+//				emailService.sendPlainText(EmailService.from,distributionSet, getEmailSubject(candidateId, false),
+//						getEmailBody(jobResult, false));
+				emailService.sendPlainText(EmailService.from, distributionSet, getEmailSubject(candidateId, true),
+						getEmailBody(jobResult.get("included"), true,prefsMinScore));
+				if(jobResult.containsKey("excluded")) {
+					emailService.sendPlainText(EmailService.from, distributionSet, getEmailSubject(candidateId, true),
+							getEmailBodyForExcludedJobs(jobResult.get("excluded")));
+				}
 			}
 		}
 	}
 
-	private String getEmailBody(JobResult jobResult, boolean initial) {
-		return (initial ? "Initial " : "") + "Results as of: [" + Util.getNow() + "]\n\n\n"
-				+ Util.formatTopJobs(jobResult, 100, JobScraper.MIN_SCORE);
+	private String getEmailBodyForExcludedJobs(JobResult jobResult) {
+		return  "Results of Excluded Jobs : [" + Util.getNow() + "]\n\n\n"
+				+ Util.formatExcludedJobs(jobResult);
 	}
 
+	
+	private String getEmailBody(JobResult jobResult, boolean initial,int score) {
+		return (initial ? "Initial " : "") + "Results as of: [" + Util.getNow() + "]\n\n\n"
+				+ Util.formatTopJobs(jobResult, 100, score);
+	}
+	
 	private String getEmailSubject(String candidateId, boolean initial) {
 		return (initial ? "Initial " : "") + "Job Results for: [" + candidateId + "]";
 	}
